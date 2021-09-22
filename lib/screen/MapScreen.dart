@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,35 +11,55 @@ class MapsDemo extends StatefulWidget {
 }
 
 class _MapsDemoState extends State<MapsDemo> {
-  late LatLng currentPosition;
+  late Position userLocation;
+  late GoogleMapController mapController;
 
-  void _getUserLocation() async {
-    var position = await GeolocatorPlatform.instance
-        .getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-
-    setState(() {
-      currentPosition = LatLng(position.latitude, position.longitude);
-    });
+  void _onMapCreated(GoogleMapController controller) {
+    mapController = controller;
   }
 
-  static final CameraPosition kan =
-      CameraPosition(target: LatLng(13.980747, 99.584355), zoom: 11.0 - 2.0);
+  Future<Position> _getLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Test if location services are enabled.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    userLocation = await Geolocator.getCurrentPosition();
+    return userLocation;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GoogleMap(initialCameraPosition: kan),
-      bottomNavigationBar: BottomNavigationBar(
+        bottomNavigationBar: BottomNavigationBar(
         items: [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.car_rental), label: 'car list'),
-          BottomNavigationBarItem(icon: Icon(Icons.logout), label: 'logout')
-        ],
-        onTap: (int index) async {
-          if (index == 1) {
-            showDialog<String>(
-              context: context,
-              builder: (BuildContext context) => AlertDialog(
+        BottomNavigationBarItem(icon: Icon(Icons.
+        car_rental), label: 'car list'),
+    BottomNavigationBarItem(icon: Icon(Icons.logout), label: 'logout')
+    ],
+    onTap: (int index) async {
+      if (index == 1) {
+        showDialog<String>(
+          context: context,
+          builder: (BuildContext context) =>
+              AlertDialog(
                 title: const Text('Logout'),
                 content: const Text('Confirm to logout'),
                 actions: <Widget>[
@@ -45,7 +67,7 @@ class _MapsDemoState extends State<MapsDemo> {
                     onPressed: () async {
                       Navigator.pop(context, 'OK');
                       SharedPreferences prefs =
-                          await SharedPreferences.getInstance();
+                      await SharedPreferences.getInstance();
                       prefs.clear();
                       Navigator.pushReplacementNamed(context, "/login");
                     },
@@ -57,20 +79,21 @@ class _MapsDemoState extends State<MapsDemo> {
                   ),
                 ],
               ),
-            );
-          }
-          if (index == 0) {
-            showDialog<String>(
-              context: context,
-              builder: (BuildContext context) => AlertDialog(
-                title: const Text('Carlist'),
-                content: const Text('Confirm to carlist'),
+        );
+      }
+      if (index == 0) {
+        showDialog<String>(
+          context: context,
+          builder: (BuildContext context) =>
+              AlertDialog(
+                title: const Text('List car'),
+                content: const Text('Confirm to list car'),
                 actions: <Widget>[
                   TextButton(
                     onPressed: () async {
                       Navigator.pop(context, 'OK');
                       SharedPreferences prefs =
-                          await SharedPreferences.getInstance();
+                      await SharedPreferences.getInstance();
                       prefs.clear();
                       Navigator.pushReplacementNamed(context, "/carlist");
                     },
@@ -82,10 +105,35 @@ class _MapsDemoState extends State<MapsDemo> {
                   ),
                 ],
               ),
+        );
+      }
+      body:FutureBuilder(
+        future: _getLocation(),
+        builder: (BuildContext context, AsyncSnapshot snapshot) {
+          if (snapshot.hasData) {
+            return GoogleMap(
+              mapType: MapType.normal,
+              onMapCreated: _onMapCreated,
+              myLocationEnabled: true,
+              initialCameraPosition: CameraPosition(
+                  target: LatLng(userLocation.latitude, userLocation.longitude),
+                  zoom: 15),
+            );
+          } else {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  CircularProgressIndicator(),
+                ],
+              ),
             );
           }
         },
-      ),
+      );
+    },
+    ),
     );
-  }
-}
+    }
+    }
+
