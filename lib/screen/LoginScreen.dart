@@ -1,5 +1,8 @@
 import 'dart:convert';
+import 'package:helloworld/screen/MapUser.dart';
 
+import 'Global.dart' as global;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -9,6 +12,7 @@ String username = "";
 String password = "";
 String email = "";
 
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
@@ -17,12 +21,17 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // static String _plate = "none";
   @override
   initState() {
     super.initState();
     SharedPreferences.getInstance().then((value) {
       if (value.getString("email") != null) {
-        Navigator.pushReplacementNamed(context, "/map");
+        if (value.getBool('admin')==true){
+          Navigator.pushReplacementNamed(context, "/admincar");
+        }else{
+          Navigator.pushReplacementNamed(context, "/map");
+        }
       }
     });
   }
@@ -252,9 +261,17 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+  //  static String getPlate(){
+  //   return this._plate;
+  // }
+  //
+  // void set plate(String value){
+  //   // this._plate = value;
+  // }
 }
 
 Future<void> LogIn(context) async {
+  CollectionReference users = FirebaseFirestore.instance.collection("users");
   String LogInURL =
       "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyCupr_lPLvh3fyowVwf4GCi0U2ygjafJWg";
   var url = Uri.parse(LogInURL);
@@ -265,9 +282,34 @@ Future<void> LogIn(context) async {
       'returnSecureToken': "true"
     });
     if (response.statusCode == 200) {
+      var AdminURL = Uri.parse("https://gps-tracking-1333d-default-rtdb.asia-southeast1.firebasedatabase.app/AdminUID.json?auth=2D7GCbQEpQFYVAf3oSBNvpu5oaUnuW6DfOytiWfH");
+      var AdminUID = await http.get(AdminURL);
+      var AdminID = AdminUID.body.replaceAll('"', "").trim();
+      var UserID = jsonDecode(response.body);
+      UserID = UserID['localId'];
       SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setString("email", username);
-      Navigator.pushReplacementNamed(context, "/map");
+      if(AdminID == UserID){
+        prefs.setBool('admin', true);
+        Navigator.pushReplacementNamed(context, "/admincar");
+      } else {
+        prefs.setBool('admin', false);
+        prefs.setString('UserID', UserID);
+        Navigator.of(context).pushReplacement(
+          new MaterialPageRoute(
+              settings: const RouteSettings(name: "/map"),
+            builder: (context) => new MapsDemo(plate: global.GlobalVariables.plate),
+          ),
+        );
+        // Navigator.pushReplacementNamed(context, "/map");
+      }
+      await users.doc(username).get().then((q) => {
+      if (q.exists) {
+        global.GlobalVariables.setplate(q.get("plate")),
+        print("Login"+global.GlobalVariables.getplate())
+      }
+
+      });
     } else {
       var data = jsonDecode(response.body);
       List error = data['error']['message'].toString().split(":");
@@ -304,6 +346,8 @@ Future<void> LogIn(context) async {
     );
   }
 }
+
+
 
 Future<void> repassword(context) async {
   String repasswordURL =

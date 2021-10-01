@@ -1,43 +1,36 @@
 import 'package:flutter/material.dart';
 
-class Carlist extends StatelessWidget {
-  final List<String> items =
-      List<String>.generate(5, (index) => "Car number: ${++index}");
+class CarDemo extends StatefulWidget {
+  @override
+  _CarState createState() => _CarState();
+}
 
-
-
+class _CarState extends State<CarDemo> {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: "Car Lists",
-      home: Scaffold(
+    return Scaffold(
         appBar: AppBar(
-          title: Text("Car Lists"),
-        ),
-        body: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              return Column(
-                children: <Widget>[
-                  ListTile(
-                    leading: Icon(Icons.directions_car),
-                    title: Text("${items[index]}"),
-                    subtitle: Text("Select Your Cars"),
-                    trailing: Icon(Icons.notifications_none),
-                  ),
-                  Divider(height: 2, color: Colors.grey.shade300,
-                  )
-                ],
-              );
-            }),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.pushReplacementNamed(context, "/map");
-          },
-          child: Icon(Icons.arrow_back),
-        ),
-      ),
+        title: Text('Car Lists'),
+    backgroundColor: Color(0xFF00796B),
+    ),
+    body: Stack(children: <Widget>[
+    Container(
+    height: double.infinity,
+    width: double.infinity,
+    decoration: BoxDecoration(
+    gradient: LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+    Color(0xFFE8F5E9),
+    Color(0xFFA9EBEE),
+    Color(0xFF7DDBC9),
+    Color(0xFF51E3D8),
+    Color(0xFF0AE3F8),
+    ])),
+    ),
+    ]
+    ),
     );
-
   }
 }
